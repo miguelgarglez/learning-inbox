@@ -1,0 +1,5 @@
+{
+  "title": "Transacciones en PostgreSQL",
+  "url": "https://www.postgresql.org/docs/current/tutorial-transactions.html",
+  "reason": "Entender qué ocurre cuando falla una escritura"
+}
