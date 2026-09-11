@@ -18,6 +18,21 @@ resultado. Leer README.md, docs/product.md y el ejercicio activo antes de editar
 - No ejecutar pruebas de carga contra servicios externos sin autorización específica.
 - Usar datos ficticios. No incorporar contexto privado de la KB al repositorio.
 
+## Aprendizaje y rigor (norma del proyecto)
+
+La comprensión del sistema es parte del resultado, no un extra. En dudas, revisiones
+de hito y primeras apariciones de conceptos, el agente debe:
+
+- Anclar explicaciones en el código del repo, no en teoría genérica desconectada.
+- Usar y corregir términos técnicos precisos (HTTP, DTO, bean, DI, validación,
+  Problem Details, etc.); cuando haya jerga imprecisa, ofrecer el término correcto.
+- Separar claramente: código propio vs lo que Spring Boot hace por anotaciones,
+  starters o auto-configuración vs reglas de dominio escritas a mano.
+- Invitar a predecir o narrar el flujo antes de cerrar la explicación del concepto.
+- Tras introducir algo nuevo (p. ej. persistencia), aclarar qué es automático y qué no.
+
+Detalle operativo en `.cursor/rules/learning-depth.mdc` (siempre activa en Cursor).
+
 ## Verificación
 
 - Probar comportamientos y propiedades, no replicar detalles de implementación.

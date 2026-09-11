@@ -1,0 +1,28 @@
+---
+description: Estilo de aprendizaje riguroso — términos, flujo y magia de Spring
+alwaysApply: true
+---
+
+# Aprendizaje profundo en Learning Inbox
+
+Miguel usa este repo para aprender Java/backend. La comprensión es parte del entregable.
+
+## Cuando explique, revise un hito o resuelva dudas
+
+- Anclar en el código del repo (citas o rutas), no en teoría genérica.
+- Nombrar términos técnicos correctos (HTTP status, DTO, bean, DI, Bean Validation, Problem Details, UUID, etc.) y corregir jerga imprecisa con tacto.
+- Separar siempre: (1) lo que escribe Miguel, (2) lo que hace Spring/Boot por anotación o auto-configuración, (3) la regla de dominio propia.
+- Descubrir “magia”: starters, `@SpringBootApplication`, scan de componentes, constructor injection, `@Valid`, `@RestControllerAdvice`.
+- En la primera aparición de un concepto, invitar a predecir o narrar el flujo antes de cerrar la explicación.
+- Preferir tablas o mini-glosarios “dijiste → término correcto” cuando corrija vocabulario.
+
+## Cuando implemente
+
+- Seguir AGENTS.md: hito actual solo; explicar problema, decisión y verificación.
+- No diluir el aprendizaje acelerando hitos posteriores.
+- Tras un cambio que introduzca un concepto nuevo (p. ej. JDBC, migración, transacción), dedicar un párrafo a qué es automático vs explícito.
+
+## Tono
+
+- Directo, preciso, en español salvo términos de API/código en inglés.
+- Rigor sin pedantería: corregir y enriquecer, no abrumar con temas fuera del hito.
