@@ -11,18 +11,36 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Testcontainers
 class ResourceApiTest {
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
+
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private JdbcClient jdbc;
+
+    @BeforeEach
+    void clearResources() {
+        jdbc.sql("DELETE FROM resources").update();
+    }
 
     @Test
     void savesAndRetrievesTheSameResource() throws Exception {
@@ -45,6 +63,20 @@ class ResourceApiTest {
         assertThat(fetched.statusCode()).isEqualTo(200);
         Map<String, Object> fetchedResource = JsonPath.read(fetched.body(), "$");
         assertThat(fetchedResource).isEqualTo(resource);
+    }
+
+    @Test
+    void storesResourceInPostgreSQL() throws Exception {
+        var created = post("""
+                {"title":"Persisted","url":"https://example.com/persisted","reason":"DB row"}
+                """);
+        assertThat(created.statusCode()).isEqualTo(201);
+        var id = UUID.fromString(JsonPath.read(created.body(), "$.id"));
+        var title = jdbc.sql("SELECT title FROM resources WHERE id = :id")
+                .param("id", id)
+                .query(String.class)
+                .optional();
+        assertThat(title).contains("Persisted");
     }
 
     @Test
@@ -71,6 +103,7 @@ class ResourceApiTest {
     })
     void rejectsInvalidInput(String body) throws Exception {
         assertProblem(post(body), 400);
+        assertThat(jdbc.sql("SELECT count(*) FROM resources").query(Long.class).single()).isZero();
     }
 
     @Test

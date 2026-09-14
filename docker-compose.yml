@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: learning_inbox
+      POSTGRES_USER: learning_inbox
+      POSTGRES_PASSWORD: learning_inbox
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learning_inbox -d learning_inbox"]
+      interval: 2s
+      timeout: 5s
+      retries: 10

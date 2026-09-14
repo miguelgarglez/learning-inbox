@@ -3,30 +3,33 @@ package dev.learninginbox.resource;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ResourceService {
-    private final ConcurrentMap<UUID, LearningResource> resources = new ConcurrentHashMap<>();
+    private final ResourceRepository repository;
 
+    public ResourceService(ResourceRepository repository) {
+        this.repository = repository;
+    }
+
+    @Transactional
     public LearningResource create(CreateResourceRequest request) {
         validateUrl(request.url());
+        // PostgreSQL timestamptz stores microsecond precision; align so POST and GET match.
         var resource = new LearningResource(
                 UUID.randomUUID(), request.title(), request.url(), request.reason(),
-                LearningResource.Status.PENDING, Instant.now());
-        resources.put(resource.id(), resource);
+                LearningResource.Status.PENDING, Instant.now().truncatedTo(ChronoUnit.MICROS));
+        repository.insert(resource);
         return resource;
     }
 
+    @Transactional(readOnly = true)
     public LearningResource find(UUID id) {
-        var resource = resources.get(id);
-        if (resource == null) {
-            throw new ResourceNotFoundException();
-        }
-        return resource;
+        return repository.findById(id).orElseThrow(ResourceNotFoundException::new);
     }
 
     private void validateUrl(String value) {

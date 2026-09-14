@@ -1,4 +1,4 @@
-# Producto y alcance inicial
+# Producto y alcance
 
 ## Uso
 
@@ -7,7 +7,7 @@ registrar lo aprendido y descargar una nota Markdown revisable.
 
 ## Recurso
 
-En el primer hito un recurso tiene:
+Un recurso tiene:
 
 - `id`: UUID asignado por el servidor, estable durante su vida.
 - `title`: título aportado por el usuario; entre 1 y 200 caracteres tras quitar espacios exteriores.
@@ -32,6 +32,11 @@ su formato no garantiza que el destino exista o sea accesible.
 - `404 Not Found` para un UUID válido inexistente.
 - `400 Bad Request` si el identificador no tiene formato UUID.
 
+## Persistencia
+
+Los recursos se guardan en PostgreSQL. Reiniciar la aplicación no borra los datos
+mientras la base siga disponible. El esquema lo aplica Flyway al arrancar.
+
 ## Criterios de aceptación
 
 1. Guardar y consultar por el identificador devuelto conserva los datos y el estado inicial.
@@ -39,13 +44,13 @@ su formato no garantiza que el destino exista o sea accesible.
 3. Un título vacío o una URL inválida produce un error sin crear el recurso.
 4. Dos recursos nuevos reciben identificadores distintos.
 5. Consultar un identificador inexistente devuelve 404.
+6. Tras reiniciar la aplicación (misma base), el GET por el id creado sigue devolviendo el recurso.
 
-## Límite deliberado del primer hito
+## Límite deliberado de este hito
 
-Almacenamiento en memoria para observar el recorrido HTTP antes de introducir SQL.
-Los datos se pierden al reiniciar. Solo uso local, sin autenticación.
-Se permiten URLs repetidas temporalmente: la regla de unicidad por propietario
-y sus pruebas de concurrencia se introducirán junto con persistencia y usuarios.
+Solo uso local, sin autenticación. Se permiten URLs repetidas temporalmente: la
+regla de unicidad por propietario y sus pruebas de concurrencia se introducirán
+junto con usuarios.
 
 No incluye etiquetas, listados, cambios de estado, notas, exportación, jobs ni interfaz.
-Estos pertenecen a hitos posteriores, no son requisitos de esta primera sesión.
+Estos pertenecen a hitos posteriores.
