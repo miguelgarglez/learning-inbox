@@ -51,7 +51,8 @@ estado aislado y no dependerá del orden de ejecución.
 - Recorrido implementado y `mvn verify` completado: 12 pruebas, sin fallos ni errores.
 - JAR ejecutado y recorrido POST 201 → GET 200 comprobado con curl.
 - Servidor de comprobación detenido al terminar.
-- Pendiente contigo: recorrer el código y comprobar que puedes explicar el flujo.
+- Pendiente contigo: predicciones de [sesión 2](second-session.md) y recorrido
+  manual Compose → POST → reinicio → GET.
 
 La prueba usa HTTP real en un puerto aleatorio y un contexto nuevo por caso para
 aislar el almacenamiento. No demuestra persistencia tras reinicio, seguridad,

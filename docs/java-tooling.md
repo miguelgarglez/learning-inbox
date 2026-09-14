@@ -76,11 +76,26 @@ No repetir versiones para dependencias gestionadas por el parent.
 
 - `spring-boot-starter-webmvc`: MVC, serialización JSON y servidor HTTP integrado.
 - `spring-boot-starter-validation`: validación de entradas mediante anotaciones Jakarta.
-- `spring-boot-starter-test`: JUnit y utilidades de prueba; `scope=test` excluye estas
-  dependencias del runtime de producción.
+- `spring-boot-starter-jdbc`: `DataSource`, pool y `JdbcClient`.
+- `spring-boot-starter-flyway` + `flyway-database-postgresql`: migraciones al arrancar.
+- `postgresql`: driver JDBC (runtime).
+- `spring-boot-starter-test`: JUnit y utilidades de prueba; `scope=test`.
+- `spring-boot-testcontainers` + módulos Testcontainers: Postgres desechable en tests.
 
 Un starter agrupa dependencias para un caso de uso. Dependencia transitiva significa
 que llega porque otra dependencia la necesita.
+
+## PostgreSQL local con Docker Compose
+
+```sh
+docker compose up -d
+docker compose ps
+docker compose down
+```
+
+La app lee `spring.datasource.*` en `application.properties` (usuario/clave/db
+`learning_inbox` en `127.0.0.1:5432`). `mvn verify` no usa Compose: Testcontainers
+levanta su propio Postgres.
 
 ## Ejecutar el artefacto empaquetado
 
@@ -91,8 +106,9 @@ java -jar target/learning-inbox-0.0.1-SNAPSHOT.jar
 Necesita haber ejecutado `mvn package` o `mvn verify`. El JAR arranca con Java;
 no necesita Maven para ejecutarse. Esta distinción separa construir de desplegar.
 
-El servidor escucha en `127.0.0.1:8080`. En este hito no hay autenticación, los datos
-están en memoria y se pierden al detenerlo. Un GET a `/` devuelve 404: no existe una página web.
+El servidor escucha en `127.0.0.1:8080`. En este hito no hay autenticación. Con
+Compose arriba, los datos viven en PostgreSQL y sobreviven a reiniciar la JVM.
+Un GET a `/` devuelve 404: no existe una página web.
 
 ## Fuentes
 

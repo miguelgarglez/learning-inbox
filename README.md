@@ -9,18 +9,20 @@
 A small Java API for collecting learning resources, built incrementally to explore
 backend engineering through working software, explicit decisions and reproducible tests.
 
-**Current milestone:** create a resource and retrieve it over HTTP, with validation
-and consistent errors. Storage is in memory. This is a local learning project:
-there is no authentication and restarting loses all data.
+**Current milestone:** create and retrieve resources over HTTP with validation,
+consistent errors and **PostgreSQL** persistence (Flyway + JDBC). This is a local
+learning project: there is no authentication.
 
 ## Try it
 
-Requires **JDK 21** and **Maven 3.9+**. Check `java -version` and `mvn -version`;
-both should report Java 21. [Java setup and Maven commands (Spanish)](docs/java-tooling.md).
+Requires **JDK 21**, **Maven 3.9+** and **Docker** (Docker Desktop is fine).
+Check `java -version`, `mvn -version` and `docker version`.
+[Java setup and Maven commands (Spanish)](docs/java-tooling.md).
 
 ```sh
 git clone https://github.com/miguelgarglez/learning-inbox.git
 cd learning-inbox
+docker compose up -d
 mvn verify
 mvn spring-boot:run
 ```
@@ -53,7 +55,9 @@ Content-Type: application/json
 ```
 
 Retrieve it with `curl -i http://127.0.0.1:8080` followed by the **actual Location
-path from your response**. Stop the server with Ctrl+C. There is no web page at `/`.
+path from your response**. Stop the app with Ctrl+C; start it again and GET the
+same path — the row remains while Postgres is running. Stop Postgres with
+`docker compose down` when you are done. There is no web page at `/`.
 
 ## API at a glance
 
@@ -66,7 +70,8 @@ Titles are trimmed and limited to 200 characters. URLs must be absolute HTTP(S)
 URLs with a host and no embedded credentials. Links are stored without fetching
 them. Errors use `application/problem+json`.
 
-[Full contract (Spanish)](docs/product.md) · [Manual requests](requests/README.md)
+[Full contract (Spanish)](docs/product.md) · [Manual requests](requests/README.md) ·
+[Bruno collection](bruno/learning-inbox/README.md)
 
 ## How it works
 
@@ -75,27 +80,33 @@ flowchart LR
     Client[HTTP client] --> Validation[JSON and field validation]
     Validation --> Controller[ResourceController]
     Controller --> Service[ResourceService]
-    Service --> Storage[(In-memory map)]
+    Service --> Repository[ResourceRepository]
+    Repository --> Postgres[(PostgreSQL)]
+    Flyway[Flyway] --> Postgres
     Controller -. errors .-> Problems[Problem Details]
 ```
 
 One application, one Maven module, packages organized by feature. The request DTO
-is distinct from the resource model. Spring provides HTTP routing, validation and
-dependency injection; the service creates IDs and timestamps and stores resources.
+is distinct from the resource model. Spring provides HTTP routing, validation,
+dependency injection, JDBC and Flyway startup; the service creates IDs and
+timestamps; the repository runs SQL.
 
-[Architecture and tradeoffs](docs/architecture.md) · [First architecture decision](docs/adr/0001-start-with-an-in-memory-api.md)
+[Architecture and tradeoffs](docs/architecture.md) ·
+[ADR: in-memory start](docs/adr/0001-start-with-an-in-memory-api.md) ·
+[ADR: PostgreSQL + Flyway + JDBC](docs/adr/0002-persist-with-postgresql-flyway-jdbc.md)
 
 ## Verification
 
 ```sh
-mvn verify                           # tests + executable JAR
-mvn -Dtest=ResourceApiTest test       # HTTP contract tests
-java -jar target/learning-inbox-0.0.1-SNAPSHOT.jar
+mvn verify                           # tests + executable JAR (needs Docker)
+mvn -Dtest=ResourceApiTest test
+java -jar target/learning-inbox-0.0.1-SNAPSHOT.jar   # needs Compose Postgres up
 ```
 
-The suite contains **12 test cases**. It starts a real embedded HTTP server on a
-random port and uses a fresh application context for each case. It checks
-round-trip data, generated identifiers, validation boundaries and error responses.
+The suite contains **15 test cases**. It starts a real embedded HTTP server on a
+random port and a disposable Postgres via Testcontainers. It checks round-trip
+data, generated identifiers, validation boundaries, error responses, SQL
+persistence and survival across Spring context reload.
 
 GitHub Actions runs `mvn verify` with Java 21 on pushes to `main` and pull requests.
 [Testing strategy and its limits](docs/testing.md).
@@ -105,7 +116,7 @@ GitHub Actions runs `mvn verify` with Java 21 on pushes to `main` and pull reque
 | Milestone | Status | Engineering focus |
 | --- | --- | --- |
 | Create → retrieve | Implemented | Java, HTTP, validation, automated tests |
-| Persistent resources | Planned | PostgreSQL, migrations, constraints, transactions |
+| Persistent resources | Implemented | PostgreSQL, migrations, constraints, transactions |
 | Private resources | Planned | Authentication, ownership, authorization tests |
 | Failure and concurrency experiments | Planned | Races, retries, recovery, invariants |
 | Operate and measure | Planned | Reproducible load, observability, deployment |
@@ -121,6 +132,7 @@ reviewed against the product contract; tests are evidence for tested behavior,
 not proof of production readiness.
 
 Learning guides are in Spanish: [first session](docs/first-session.md),
+[second session](docs/second-session.md),
 [Java tooling](docs/java-tooling.md), [domain glossary](docs/glossary.md).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow.

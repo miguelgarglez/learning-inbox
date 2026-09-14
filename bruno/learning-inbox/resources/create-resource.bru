@@ -1,0 +1,44 @@
+meta {
+  name: Create resource
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/resources
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Transacciones en PostgreSQL",
+    "url": "https://www.postgresql.org/docs/current/tutorial-transactions.html",
+    "reason": "Entender qué ocurre cuando falla una escritura"
+  }
+}
+
+vars:pre-request {
+  baseUrl: 127.0.0.1:8080
+}
+
+script:post-response {
+  if (res.getStatus() === 201 && res.body && res.body.id) {
+    bru.setVar("resourceId", res.body.id);
+  }
+}
+
+tests {
+  test("creates resource with 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+  
+  test("response has id and PENDING status", function () {
+    expect(res.body).to.have.property("id");
+    expect(res.body.status).to.equal("PENDING");
+  });
+}
