@@ -3,6 +3,7 @@ package dev.learninginbox.resource;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,9 +19,10 @@ public class ResourceService {
     @Transactional
     public LearningResource create(CreateResourceRequest request) {
         validateUrl(request.url());
+        // PostgreSQL timestamptz stores microsecond precision; align so POST and GET match.
         var resource = new LearningResource(
                 UUID.randomUUID(), request.title(), request.url(), request.reason(),
-                LearningResource.Status.PENDING, Instant.now());
+                LearningResource.Status.PENDING, Instant.now().truncatedTo(ChronoUnit.MICROS));
         repository.insert(resource);
         return resource;
     }
