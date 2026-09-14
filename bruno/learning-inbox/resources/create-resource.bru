@@ -36,7 +36,7 @@ tests {
   test("creates resource with 201", function () {
     expect(res.getStatus()).to.equal(201);
   });
-  
+
   test("response has id and PENDING status", function () {
     expect(res.body).to.have.property("id");
     expect(res.body.status).to.equal("PENDING");
