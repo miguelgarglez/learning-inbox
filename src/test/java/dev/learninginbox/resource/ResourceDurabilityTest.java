@@ -3,6 +3,7 @@ package dev.learninginbox.resource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import dev.learninginbox.security.DevApiKeys;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -40,6 +41,7 @@ class ResourceDurabilityTest {
     void createsResourceInPostgreSQL() throws Exception {
         var created = send(HttpRequest.newBuilder(endpoint("/api/resources"))
                 .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + DevApiKeys.ALICE)
                 .POST(HttpRequest.BodyPublishers.ofString("""
                         {"title":"Survives reload","url":"https://example.com/reload"}
                         """)));
@@ -51,11 +53,15 @@ class ResourceDurabilityTest {
     @Test
     @Order(2)
     void retrievesResourceAfterSpringContextReload() throws Exception {
-        var fetched = send(HttpRequest.newBuilder(endpoint(location)).GET());
+        var fetched = send(HttpRequest.newBuilder(endpoint(location))
+                .header("Authorization", "Bearer " + DevApiKeys.ALICE)
+                .GET());
         assertThat(fetched.statusCode()).isEqualTo(200);
         assertThat((String) JsonPath.read(fetched.body(), "$.title")).isEqualTo("Survives reload");
         assertThat((String) JsonPath.read(fetched.body(), "$.id"))
                 .isEqualTo(JsonPath.read(createdBody, "$.id"));
+        assertThat((String) JsonPath.read(fetched.body(), "$.ownerId"))
+                .isEqualTo(DevApiKeys.ALICE_ID.toString());
     }
 
     private URI endpoint(String path) {

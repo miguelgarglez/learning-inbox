@@ -7,18 +7,23 @@ meta {
 get {
   url: {{baseUrl}}/api/resources/{{resourceId}}
   body: none
-  auth: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{apiKey}}
 }
 
 vars:pre-request {
   baseUrl: localhost:8080
+  apiKey: li_alice_dev_key_001
 }
 
 tests {
   test("returns 200 for stored resource", function () {
     expect(res.getStatus()).to.equal(200);
   });
-
+  
   test("id matches runtime variable", function () {
     expect(res.body.id).to.equal(bru.getVar("resourceId"));
   });

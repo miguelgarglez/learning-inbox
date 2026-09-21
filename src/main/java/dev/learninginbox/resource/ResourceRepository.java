@@ -17,10 +17,11 @@ public class ResourceRepository {
 
     public void insert(LearningResource resource) {
         jdbc.sql("""
-                INSERT INTO resources (id, title, url, reason, status, created_at)
-                VALUES (:id, :title, :url, :reason, :status, :createdAt)
+                INSERT INTO resources (id, owner_id, title, url, reason, status, created_at)
+                VALUES (:id, :ownerId, :title, :url, :reason, :status, :createdAt)
                 """)
                 .param("id", resource.id())
+                .param("ownerId", resource.ownerId())
                 .param("title", resource.title())
                 .param("url", resource.url())
                 .param("reason", resource.reason())
@@ -29,15 +30,17 @@ public class ResourceRepository {
                 .update();
     }
 
-    public Optional<LearningResource> findById(UUID id) {
+    public Optional<LearningResource> findByIdAndOwnerId(UUID id, UUID ownerId) {
         return jdbc.sql("""
-                SELECT id, title, url, reason, status, created_at
+                SELECT id, owner_id, title, url, reason, status, created_at
                 FROM resources
-                WHERE id = :id
+                WHERE id = :id AND owner_id = :ownerId
                 """)
                 .param("id", id)
+                .param("ownerId", ownerId)
                 .query((rs, rowNum) -> new LearningResource(
                         rs.getObject("id", UUID.class),
+                        rs.getObject("owner_id", UUID.class),
                         rs.getString("title"),
                         rs.getString("url"),
                         rs.getString("reason"),

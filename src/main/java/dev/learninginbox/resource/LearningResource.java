@@ -4,7 +4,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record LearningResource(
-        UUID id, String title, String url, String reason, Status status, Instant createdAt) {
+        UUID id,
+        UUID ownerId,
+        String title,
+        String url,
+        String reason,
+        Status status,
+        Instant createdAt) {
     public enum Status {
         PENDING
     }
