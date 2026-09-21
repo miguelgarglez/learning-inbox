@@ -106,7 +106,8 @@ java -jar target/learning-inbox-0.0.1-SNAPSHOT.jar
 Necesita haber ejecutado `mvn package` o `mvn verify`. El JAR arranca con Java;
 no necesita Maven para ejecutarse. Esta distinción separa construir de desplegar.
 
-El servidor escucha en `127.0.0.1:8080`. En este hito no hay autenticación. Con
+El servidor escucha en `127.0.0.1:8080`. Las rutas `/api/**` exigen
+`Authorization: Bearer <api-key>` (seeds locales en la sesión 3). Con
 Compose arriba, los datos viven en PostgreSQL y sobreviven a reiniciar la JVM.
 Un GET a `/` devuelve 404: no existe una página web.
 

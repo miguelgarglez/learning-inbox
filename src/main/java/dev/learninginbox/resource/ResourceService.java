@@ -17,19 +17,24 @@ public class ResourceService {
     }
 
     @Transactional
-    public LearningResource create(CreateResourceRequest request) {
+    public LearningResource create(UUID ownerId, CreateResourceRequest request) {
         validateUrl(request.url());
         // PostgreSQL timestamptz stores microsecond precision; align so POST and GET match.
         var resource = new LearningResource(
-                UUID.randomUUID(), request.title(), request.url(), request.reason(),
-                LearningResource.Status.PENDING, Instant.now().truncatedTo(ChronoUnit.MICROS));
+                UUID.randomUUID(),
+                ownerId,
+                request.title(),
+                request.url(),
+                request.reason(),
+                LearningResource.Status.PENDING,
+                Instant.now().truncatedTo(ChronoUnit.MICROS));
         repository.insert(resource);
         return resource;
     }
 
     @Transactional(readOnly = true)
-    public LearningResource find(UUID id) {
-        return repository.findById(id).orElseThrow(ResourceNotFoundException::new);
+    public LearningResource find(UUID ownerId, UUID id) {
+        return repository.findByIdAndOwnerId(id, ownerId).orElseThrow(ResourceNotFoundException::new);
     }
 
     private void validateUrl(String value) {

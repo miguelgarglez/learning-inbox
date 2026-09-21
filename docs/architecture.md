@@ -1,49 +1,48 @@
 # Architecture
 
-One Spring Boot application exposes an HTTP API on loopback and stores resources
-in PostgreSQL. There is no authentication provider, external HTTP dependency or
-background worker.
+One Spring Boot application exposes an HTTP API on loopback. Resources live in
+PostgreSQL and belong to an authenticated user identified by a Bearer API key.
+There is no OAuth provider, external HTTP dependency or background worker.
 
 | Component | Responsibility |
 | --- | --- |
-| LearningInboxApplication | Entry point and Spring configuration discovery. |
+| LearningInboxApplication | Entry point; excludes default in-memory user auto-config. |
+| SecurityConfig | Stateless filter chain; all requests authenticated. |
+| ApiKeyAuthenticationFilter | Reads `Authorization: Bearer`, resolves user via JDBC. |
+| ProblemDetailsAuthenticationEntryPoint | `401` as `application/problem+json`. |
+| ApiKeyRepository | Token → `AuthenticatedUser`. |
 | CreateResourceRequest | Incoming DTO, title normalization and field constraints. |
-| ResourceController | HTTP routing, status codes and Location. |
-| ResourceService | URL semantics, identity, timestamps and transactional use of the repository. |
-| ResourceRepository | SQL insert and lookup via `JdbcClient`. |
-| LearningResource | Immutable resource data and initial status. |
-| ResourceExceptionHandler | Translate expected failures into Problem Details. |
-| Flyway migration `V1__create_resources` | Versioned table definition and database constraints. |
+| ResourceController | HTTP routing; takes `@AuthenticationPrincipal`. |
+| ResourceService | URL semantics, identity, timestamps, owner-scoped use of the repository. |
+| ResourceRepository | SQL insert and owner-scoped lookup via `JdbcClient`. |
+| LearningResource | Immutable resource data including `ownerId`. |
+| ResourceExceptionHandler | Domain failures → Problem Details. |
+| Flyway `V1` / `V2` | Resources table; users, api_keys, `owner_id`. |
 
 ## Request flow
 
-For POST, Spring deserializes JSON into the request record, validates its fields,
-and invokes the controller. The service checks URL semantics, assigns id/status
-timestamps, and inserts inside a transaction. The controller responds with 201
-and a relative Location path.
+For POST, Spring Security authenticates the Bearer key (or returns 401). Spring
+MVC deserializes and validates the body, then the controller passes the principal's
+id to the service. The service assigns resource id/status/timestamps, inserts with
+`owner_id`, and responds 201 with Location.
 
-For GET, Spring converts the path parameter to UUID, the service reads through
-the repository, and the result becomes JSON. Missing resources return 404.
-Invalid JSON, invalid fields and malformed identifiers return 400.
+For GET, after authentication the service reads `WHERE id = ? AND owner_id = ?`.
+Missing or foreign rows become 404. Malformed ids remain 400.
 
 ## Boundaries and tradeoffs
 
-- PostgreSQL is the system of record. Restarting the JVM does not erase rows
-  while the database remains available.
-- Flyway owns schema evolution. Application code does not create tables ad hoc.
-- Database CHECKs and NOT NULL reinforce HTTP validation; they are a safety net,
-  not a replacement for Bean Validation at the API boundary.
-- `@Transactional` on the service marks the unit of work for create/find. A
-  single INSERT failure rolls back that unit; richer multi-step rollback cases
-  are still roadmap experiments.
-- Tests use Testcontainers Postgres and truncate (or ordered context reload) for
-  isolation instead of relying on an empty in-memory map.
-- Local binding limits exposure in this unauthenticated milestone. URL uniqueness
-  per owner waits for authentication.
+- Ownership is a domain rule enforced in SQL, not only in the controller.
+- Another user's resource is indistinguishable from missing (`404`) to avoid
+  existence leaks.
+- API keys are plaintext in the database for local learning; hashing and rotation
+  are out of scope.
+- URL uniqueness per owner waits for the concurrency milestone.
+- Tests use Testcontainers Postgres and truncate `resources` between cases; users
+  and keys stay as Flyway seeds.
 
 ## Next architectural change
 
-Introduce ownership and authentication. Choose authorization and uniqueness
-rules with that model rather than adding generic security frameworks early.
+Failure and concurrency experiments: races on duplicate submissions, retries and
+invariants (including uniqueness per owner when introduced).
 
-See [ADR 0002](adr/0002-persist-with-postgresql-flyway-jdbc.md).
+See [ADR 0003](adr/0003-private-resources-api-keys.md).

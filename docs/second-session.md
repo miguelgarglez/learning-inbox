@@ -52,5 +52,6 @@ Opcional: colección Bruno en `bruno/learning-inbox/` (Create → Get con `resou
 - `mvn verify`: 15 pruebas, sin fallos (incluye aserción SQL y recarga de contexto).
 - Manual Compose + reinicio de app: comprobar en tu máquina con los comandos de arriba.
 
-No demuestra autenticación, unicidad por propietario, rollback forzado en fallos
-parciales multi-paso, ni capacidad bajo carga.
+Autenticación y ownership: ver [sesión 3](third-session.md). No demuestra
+unicidad por propietario, rollback forzado en fallos parciales multi-paso, ni
+capacidad bajo carga.

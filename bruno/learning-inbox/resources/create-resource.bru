@@ -7,11 +7,15 @@ meta {
 post {
   url: {{baseUrl}}/api/resources
   body: json
-  auth: none
+  auth: bearer
 }
 
 headers {
   Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{apiKey}}
 }
 
 body:json {
@@ -23,7 +27,8 @@ body:json {
 }
 
 vars:pre-request {
-  baseUrl: 127.0.0.1:8080
+  baseUrl: localhost:8080
+  apiKey: li_alice_dev_key_001
 }
 
 script:post-response {
@@ -37,8 +42,9 @@ tests {
     expect(res.getStatus()).to.equal(201);
   });
 
-  test("response has id and PENDING status", function () {
+  test("response has id, owner and PENDING status", function () {
     expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("ownerId");
     expect(res.body.status).to.equal("PENDING");
   });
 }

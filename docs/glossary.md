@@ -14,5 +14,10 @@ Añadir conceptos cuando se utilicen y acompañarlos de un ejemplo comprobable.
 | Transacción / transaction | Unidad de trabajo en la base: se confirma completa o se deshace. |
 | Repositorio / repository | Aquí: clase que ejecuta SQL concreto para guardar o leer recursos. |
 | Constraint | Regla en la base (NOT NULL, CHECK, PK) que rechaza datos inválidos. |
+| Autenticación / authentication | Demostrar identidad (aquí: API key Bearer válida). |
+| Autorización / authorization | Decidir si ese principal puede operar sobre un recurso. |
+| Ownership | El recurso guarda `owner_id`; solo ese dueño lo lee. |
+| API key | Secreto opaco que el cliente envía; el servidor lo resuelve a un usuario. |
+| Principal | Identidad autenticada disponible en el `SecurityContext` del request. |
 
-Idempotencia, unicidad por propietario y concurrencia se desarrollarán cuando aparezcan en un ejercicio.
+Unicidad por propietario, idempotencia y concurrencia se desarrollarán en el siguiente hito.

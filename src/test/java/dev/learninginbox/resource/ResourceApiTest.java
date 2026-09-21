@@ -3,6 +3,7 @@ package dev.learninginbox.resource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.jayway.jsonpath.JsonPath;
+import dev.learninginbox.security.DevApiKeys;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -45,7 +46,7 @@ class ResourceApiTest {
     @Test
     void savesAndRetrievesTheSameResource() throws Exception {
         var before = Instant.now();
-        var created = post("""
+        var created = post(DevApiKeys.ALICE, """
                 {"title":"  Transactions  ","url":"https://example.com/article","reason":"Learn rollback"}
                 """);
         assertThat(created.statusCode()).isEqualTo(201);
@@ -56,27 +57,28 @@ class ResourceApiTest {
         assertThat(resource).containsEntry("title", "Transactions")
                 .containsEntry("url", "https://example.com/article")
                 .containsEntry("reason", "Learn rollback")
-                .containsEntry("status", "PENDING");
+                .containsEntry("status", "PENDING")
+                .containsEntry("ownerId", DevApiKeys.ALICE_ID.toString());
         var location = created.headers().firstValue("Location").orElseThrow();
         assertThat(location).isEqualTo("/api/resources/" + id);
-        var fetched = get(location);
+        var fetched = get(DevApiKeys.ALICE, location);
         assertThat(fetched.statusCode()).isEqualTo(200);
         Map<String, Object> fetchedResource = JsonPath.read(fetched.body(), "$");
         assertThat(fetchedResource).isEqualTo(resource);
     }
 
     @Test
-    void storesResourceInPostgreSQL() throws Exception {
-        var created = post("""
+    void storesResourceInPostgreSQLWithOwner() throws Exception {
+        var created = post(DevApiKeys.ALICE, """
                 {"title":"Persisted","url":"https://example.com/persisted","reason":"DB row"}
                 """);
         assertThat(created.statusCode()).isEqualTo(201);
         var id = UUID.fromString(JsonPath.read(created.body(), "$.id"));
-        var title = jdbc.sql("SELECT title FROM resources WHERE id = :id")
+        var ownerId = jdbc.sql("SELECT owner_id FROM resources WHERE id = :id")
                 .param("id", id)
-                .query(String.class)
+                .query(UUID.class)
                 .optional();
-        assertThat(title).contains("Persisted");
+        assertThat(ownerId).contains(DevApiKeys.ALICE_ID);
     }
 
     @Test
@@ -84,8 +86,8 @@ class ResourceApiTest {
         String body = """
                 {"title":"Article","url":"https://example.com/article"}
                 """;
-        var first = post(body);
-        var second = post(body);
+        var first = post(DevApiKeys.ALICE, body);
+        var second = post(DevApiKeys.ALICE, body);
         assertThat(first.statusCode()).isEqualTo(201);
         assertThat(second.statusCode()).isEqualTo(201);
         assertThat(first.headers().firstValue("Location"))
@@ -102,23 +104,46 @@ class ResourceApiTest {
             "{\"title\":\"Article\",\"url\":\"https://\"}"
     })
     void rejectsInvalidInput(String body) throws Exception {
-        assertProblem(post(body), 400);
+        assertProblem(post(DevApiKeys.ALICE, body), 400);
         assertThat(jdbc.sql("SELECT count(*) FROM resources").query(Long.class).single()).isZero();
     }
 
     @Test
     void enforcesLengthLimitsAfterTrimmingTitle() throws Exception {
-        assertThat(post(body(" " + "x".repeat(200) + " ", "https://example.com", "x".repeat(1000)))
+        assertThat(post(DevApiKeys.ALICE, body(" " + "x".repeat(200) + " ", "https://example.com", "x".repeat(1000)))
                 .statusCode()).isEqualTo(201);
-        assertProblem(post(body("x".repeat(201), "https://example.com", "")), 400);
-        assertProblem(post(body("Article", "https://example.com", "x".repeat(1001))), 400);
-        assertProblem(post(body("Article", "https://example.com/" + "x".repeat(2048), "")), 400);
+        assertProblem(post(DevApiKeys.ALICE, body("x".repeat(201), "https://example.com", "")), 400);
+        assertProblem(post(DevApiKeys.ALICE, body("Article", "https://example.com", "x".repeat(1001))), 400);
+        assertProblem(post(DevApiKeys.ALICE, body("Article", "https://example.com/" + "x".repeat(2048), "")), 400);
     }
 
     @Test
     void distinguishesMissingResourceFromMalformedId() throws Exception {
-        assertProblem(get("/api/resources/" + UUID.randomUUID()), 404);
-        assertProblem(get("/api/resources/not-a-uuid"), 400);
+        assertProblem(get(DevApiKeys.ALICE, "/api/resources/" + UUID.randomUUID()), 404);
+        assertProblem(get(DevApiKeys.ALICE, "/api/resources/not-a-uuid"), 400);
+    }
+
+    @Test
+    void rejectsMissingOrInvalidApiKey() throws Exception {
+        assertProblem(send(HttpRequest.newBuilder(endpoint("/api/resources"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("""
+                        {"title":"No auth","url":"https://example.com/no-auth"}
+                        """))), 401);
+        assertProblem(post("li_not_a_real_key", """
+                {"title":"Bad key","url":"https://example.com/bad-key"}
+                """), 401);
+    }
+
+    @Test
+    void hidesAnotherUsersResource() throws Exception {
+        var created = post(DevApiKeys.ALICE, """
+                {"title":"Alice only","url":"https://example.com/alice"}
+                """);
+        assertThat(created.statusCode()).isEqualTo(201);
+        var location = created.headers().firstValue("Location").orElseThrow();
+        assertProblem(get(DevApiKeys.BOB, location), 404);
+        assertThat(get(DevApiKeys.ALICE, location).statusCode()).isEqualTo(200);
     }
 
     private String body(String title, String url, String reason) {
@@ -133,14 +158,17 @@ class ResourceApiTest {
         assertThat(reportedStatus).isEqualTo(status);
     }
 
-    private HttpResponse<String> post(String body) throws Exception {
+    private HttpResponse<String> post(String apiKey, String body) throws Exception {
         return send(HttpRequest.newBuilder(endpoint("/api/resources"))
                 .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(body)));
     }
 
-    private HttpResponse<String> get(String path) throws Exception {
-        return send(HttpRequest.newBuilder(endpoint(path)).GET());
+    private HttpResponse<String> get(String apiKey, String path) throws Exception {
+        return send(HttpRequest.newBuilder(endpoint(path))
+                .header("Authorization", "Bearer " + apiKey)
+                .GET());
     }
 
     private URI endpoint(String path) {
